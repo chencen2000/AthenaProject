@@ -19,22 +19,23 @@ namespace CaptureImage
         {
             System.Console.Out.Write("");
         }
-        static void Main(string[] args)
+        static int Main(string[] args)
         {
+            int ret = -1;
             System.Configuration.Install.InstallContext _args = new System.Configuration.Install.InstallContext(null, args);
             if (_args.IsParameterTrue("debug"))
             {
                 System.Console.Out.WriteLine("Wait for debugger, press any key to continue...");
                 System.Console.ReadKey();
             }
+            
+            var appSettings = ConfigurationManager.AppSettings;
             if (!_args.Parameters.ContainsKey("dir"))
-            {
-                _args.Parameters.Add("dir", System.Environment.CurrentDirectory);
-            }
+                _args.Parameters.Add("dir", string.IsNullOrEmpty(appSettings["dir"]) ? System.Environment.CurrentDirectory : appSettings["dir"]);
             if(!_args.Parameters.ContainsKey("imei"))
-                _args.Parameters.Add("imei", "output");
+                _args.Parameters.Add("imei", string.IsNullOrEmpty(appSettings["imei"]) ? "output" : appSettings["imei"]);
             if (!_args.Parameters.ContainsKey("ip"))
-                _args.Parameters.Add("ip", "10.1.1.103");
+                _args.Parameters.Add("ip", string.IsNullOrEmpty(appSettings["ip"]) ? "10.1.1.103" : appSettings["ip"]);
             try
             {
                 string s = System.IO.Path.Combine(_args.Parameters["dir"], _args.Parameters["imei"]);
@@ -51,20 +52,46 @@ namespace CaptureImage
             if(_args.Parameters.ContainsKey("target") && System.IO.Directory.Exists(_args.Parameters["target"]))
             {
                 // start
-                //test(_args.Parameters);
-                //downloadThread();
-                test2();
-                //download_test();
+                ret = start(_args.Parameters);
             }
             else
             {
                 //test();
             }
+            return ret;
         }
 
-        static void start(string target)
+        static int start(System.Collections.Specialized.StringDictionary args)
         {
-
+            int ret = -1;
+            Renci.SshNet.SshClient ssh = new Renci.SshNet.SshClient(args["ip"], "qa", "qa");
+            try
+            {
+                ssh.Connect();
+                Dictionary<int, object> cameras = getAllCameras(ssh);
+                // check 1~6 camera exists
+                var missing = Enumerable.Range(1, 6).Except(cameras.Keys);
+                if (missing.Count() > 0)
+                {
+                    // missing camera.
+                    System.Console.WriteLine($"Missing following camera: {string.Join(",", missing)}");
+                    ret = 1;
+                }
+                else
+                {
+                    // start process
+                }
+            }
+            catch (Exception) { }
+            finally
+            {
+                try
+                {
+                    ssh.Disconnect();
+                }
+                catch (Exception) { }
+            }
+            return ret;
         }
         static void test(System.Collections.Specialized.StringDictionary args)
         {
@@ -74,13 +101,22 @@ namespace CaptureImage
             {
                 c.Connect();
 
-                string[] ports = getCameras(c);
+                string[] ports = getCameraPorts(c);
                 Dictionary<string, object> cameras = new Dictionary<string, object>();
                 foreach (string p in ports)
                 {
                     Dictionary<string, string> prop = getCameraProperties(c, p);
-                    cameras.Add(p, prop);
+                    string id = lookForCamera(prop);
                     // look for camera id
+                    if (!string.IsNullOrEmpty(id))
+                    {
+                        prop.Add("id", id);
+                        cameras.Add(p, prop);
+                    }
+                    else
+                    {
+                        // error. missing camera.
+                    }
                 }
 
                 // take photo
@@ -100,7 +136,11 @@ namespace CaptureImage
         static string lookForCamera(Dictionary<string,string> prop)
         {
             string ret = "";
-
+            var appSettings = ConfigurationManager.AppSettings;
+            if (prop.ContainsKey("sn"))
+            {
+                ret = appSettings[prop["sn"]];
+            }
             return ret;
         }
         static void download_test()
@@ -127,7 +167,7 @@ namespace CaptureImage
             
         }
 
-        static string[] getCameras(Renci.SshNet.SshClient ssh)
+        static string[] getCameraPorts(Renci.SshNet.SshClient ssh)
         {
             logIt("getCameras: ++");
             List<string> ports = new List<string>();
@@ -165,10 +205,77 @@ namespace CaptureImage
                     ret["model"] = m.Groups[2].Value.Trim();
                     ret["version"] = m.Groups[3].Value.Trim();
                     ret["serialnumber"] = m.Groups[4].Value.Trim();
+                    if(ret["serialnumber"].Length>7)
+                        ret["sn"] = ret["serialnumber"].Substring(ret["serialnumber"].Length - 7);
                 }
+            }
+            logIt($"getCameraProperties: dump camera properties: property count={ret.Count}");
+            foreach(KeyValuePair<string,string> kvp in ret)
+            {
+                logIt($"getCameraProperties: {kvp.Key}={kvp.Value}");
             }
             logIt("getCameraProperties: --");
             return ret;
+        }
+        static Dictionary<int, object> getAllCameras(Renci.SshNet.SshClient ssh)
+        {
+            string[] ports = getCameraPorts(ssh);
+            Dictionary<int, object> cameras = new Dictionary<int, object>();
+            foreach (string p in ports)
+            {
+                Dictionary<string, string> prop = getCameraProperties(ssh, p);
+                string id = lookForCamera(prop);
+                // look for camera id
+                int i = 0;
+                if (!string.IsNullOrEmpty(id) && Int32.TryParse(id, out i))
+                {
+                    prop.Add("port", p);
+                    prop.Add("id", id);
+                    cameras.Add(i, prop);
+                }
+                else
+                {
+                    // error. missing camera.
+                }
+            }
+            return cameras;
+        }
+        static void startProcess(Renci.SshNet.SshClient ssh, Dictionary<int, object> cameras)
+        {
+            Dictionary<string, string> camera = null;
+            if(cameras.ContainsKey(1))
+            {
+                camera = (Dictionary<string, string>)cameras[1];
+                // 1. take a picture on camera 1 with low light
+                // 2. take a picture on camera 1 with high light with exposurecompensation=0
+                // 3. take a picture on camera 1 with high light with exposurecompensation=-3
+
+            }
+            // 4. take a picture on camera 2
+            if (cameras.ContainsKey(2))
+            {
+                camera = (Dictionary<string, string>)cameras[2];
+            }
+            // 5. take a picture on camera 3
+            if (cameras.ContainsKey(3))
+            {
+                camera = (Dictionary<string, string>)cameras[3];
+            }
+            // 6. take a picture on camera 4
+            if (cameras.ContainsKey(4))
+            {
+                camera = (Dictionary<string, string>)cameras[4];
+            }
+            // 7. take a picture on camera 5
+            if (cameras.ContainsKey(5))
+            {
+                camera = (Dictionary<string, string>)cameras[5];
+            }
+            // 8. take a picture on camera 6
+            if (cameras.ContainsKey(6))
+            {
+                camera = (Dictionary<string, string>)cameras[6];
+            }
         }
     }
 }
