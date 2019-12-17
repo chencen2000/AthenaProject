@@ -39,11 +39,11 @@ namespace CaptureImage
             try
             {
                 string s = System.IO.Path.Combine(_args.Parameters["dir"], _args.Parameters["imei"]);
-                try
-                {
-                    System.IO.Directory.Delete(s, true);
-                }
-                catch (Exception) { }
+                //try
+                //{
+                //    System.IO.Directory.Delete(s, true);
+                //}
+                //catch (Exception) { }
                 System.IO.Directory.CreateDirectory(s);
                 _args.Parameters.Add("target", s);
             }
@@ -53,6 +53,7 @@ namespace CaptureImage
             {
                 // start
                 ret = start(_args.Parameters);
+                //test(_args.Parameters);
             }
             else
             {
@@ -80,6 +81,10 @@ namespace CaptureImage
                 else
                 {
                     // start process
+                    if (!startProcess(ssh, cameras, args))
+                        ret = 2;
+                    else
+                        ret = 0;
                 }
             }
             catch (Exception) { }
@@ -100,30 +105,7 @@ namespace CaptureImage
             try
             {
                 c.Connect();
-
-                string[] ports = getCameraPorts(c);
-                Dictionary<string, object> cameras = new Dictionary<string, object>();
-                foreach (string p in ports)
-                {
-                    Dictionary<string, string> prop = getCameraProperties(c, p);
-                    string id = lookForCamera(prop);
-                    // look for camera id
-                    if (!string.IsNullOrEmpty(id))
-                    {
-                        prop.Add("id", id);
-                        cameras.Add(p, prop);
-                    }
-                    else
-                    {
-                        // error. missing camera.
-                    }
-                }
-
-                // take photo
-                foreach (KeyValuePair<string, object> kvp in cameras)
-                {
-                    Renci.SshNet.SshCommand cmd = c.RunCommand($"gphoto2 --port={kvp.Key} --capture-image-and-download --filename=1.jpg --force-overwrite");
-                }
+                Renci.SshNet.SshCommand cmd = c.RunCommand("sudo ls -l");
             }
             catch (Exception) { }
             finally
@@ -143,22 +125,38 @@ namespace CaptureImage
             }
             return ret;
         }
-        static void download_test()
+        static bool downloadFile(string targetFilename, System.Collections.Specialized.StringDictionary args)
         {
-            Renci.SshNet.SftpClient sftp = new Renci.SshNet.SftpClient("10.1.1.103", "qa", "qa");
-            sftp.Connect();
-            string pwd = sftp.WorkingDirectory;
-            var files = sftp.ListDirectory(".");
-            sftp.Disconnect();
+            bool ret = false;
+            logIt($"downloadFile: ++ filename={targetFilename}");
+            //Renci.SshNet.SftpClient sftp = new Renci.SshNet.SftpClient(args["ip"], "qa", "qa");
+            //sftp.Connect();
+            //string pwd = sftp.WorkingDirectory;
+            //var files = sftp.ListDirectory(".");
+            //sftp.Disconnect();
 
-            Renci.SshNet.ScpClient scp = new Renci.SshNet.ScpClient("10.1.1.103", "qa", "qa");
-            scp.Connect();
-            using (var ms = new MemoryStream())
+            Renci.SshNet.ScpClient scp = new Renci.SshNet.ScpClient(args["ip"], "qa", "qa");
+            try
             {
-                scp.Download("1.jpg", ms);
-                System.IO.File.WriteAllBytes("1.jpg", ms.ToArray());
+                scp.Connect();
+                using (var ms = new MemoryStream())
+                {
+                    scp.Download(System.IO.Path.GetFileName(targetFilename), ms);
+                    System.IO.File.WriteAllBytes(targetFilename, ms.ToArray());
+                    ret = true;
+                }
             }
-            scp.Disconnect();
+            catch (Exception ex)
+            {
+                logIt($"downloadFile: Exception={ex.Message}");
+            }
+            finally
+            {
+                try { scp.Disconnect(); }
+                catch (Exception) { }
+            }
+            logIt($"downloadFile: -- ret={ret}");
+            return ret;
         }
 
         static void test2()
@@ -209,16 +207,12 @@ namespace CaptureImage
                         ret["sn"] = ret["serialnumber"].Substring(ret["serialnumber"].Length - 7);
                 }
             }
-            logIt($"getCameraProperties: dump camera properties: property count={ret.Count}");
-            foreach(KeyValuePair<string,string> kvp in ret)
-            {
-                logIt($"getCameraProperties: {kvp.Key}={kvp.Value}");
-            }
             logIt("getCameraProperties: --");
             return ret;
         }
         static Dictionary<int, object> getAllCameras(Renci.SshNet.SshClient ssh)
         {
+            logIt("getAllCameras: ++");
             string[] ports = getCameraPorts(ssh);
             Dictionary<int, object> cameras = new Dictionary<int, object>();
             foreach (string p in ports)
@@ -232,50 +226,181 @@ namespace CaptureImage
                     prop.Add("port", p);
                     prop.Add("id", id);
                     cameras.Add(i, prop);
+                    logIt($"dump camera (#{id}) properties: property count={prop.Count}");
+                    foreach (KeyValuePair<string, string> kvp in prop)
+                    {
+                        logIt($"getCameraProperties: {kvp.Key}={kvp.Value}");
+                    }
                 }
                 else
                 {
                     // error. missing camera.
                 }
             }
+            logIt("getAllCameras: --");
             return cameras;
         }
-        static void startProcess(Renci.SshNet.SshClient ssh, Dictionary<int, object> cameras)
+        static bool startProcess(Renci.SshNet.SshClient ssh, Dictionary<int, object> cameras, System.Collections.Specialized.StringDictionary args)
         {
             Dictionary<string, string> camera = null;
+            bool ret = false;
+            string target = args["target"];
+            List<Task<bool>> tasks = new List<Task<bool>>();
+            Task<bool> set_exposure = null;
             if(cameras.ContainsKey(1))
             {
                 camera = (Dictionary<string, string>)cameras[1];
                 // 1. take a picture on camera 1 with low light
-                // 2. take a picture on camera 1 with high light with exposurecompensation=0
-                // 3. take a picture on camera 1 with high light with exposurecompensation=-3
+                // turn on light 1
+                string fn = $"{camera["id"]}-2.jpg";
+                Renci.SshNet.SshCommand cmd1 = ssh.RunCommand($"./LEDControl -txdata=01");
+                Renci.SshNet.SshCommand cmd3 = ssh.RunCommand($"gphoto2 --port={camera["port"]} --capture-image-and-download --filename={fn} --force-overwrite");
+                var t = Task<bool>.Factory.StartNew((o) =>
+                {
+                    bool r = false;
+                    r = downloadFile(o.ToString(), args);
+                    if (!r)
+                        logIt($"Fail to download {o}.");
+                    return r;
+                }, $"{System.IO.Path.Combine(target, $"{fn}")}");
+                tasks.Add(t);
 
+                // 2. take a picture on camera 1 with high light with exposurecompensation=0
+                fn = $"{camera["id"]}-1.jpg";
+                cmd1 = ssh.RunCommand($"./LEDControl -txdata=02");
+                cmd3 = ssh.RunCommand($"gphoto2 --port={camera["port"]} --capture-image-and-download --filename={fn} --force-overwrite");
+                t = Task<bool>.Factory.StartNew((o) =>
+                {
+                    bool r = false;
+                    r = downloadFile(o.ToString(), args);
+                    if (!r)
+                        logIt($"Fail to download {o}.");
+                    return r;
+                }, $"{System.IO.Path.Combine(target, $"{fn}")}");
+                tasks.Add(t);
+                // 3. take a picture on camera 1 with high light with exposurecompensation=-3
+                set_exposure = Task<bool>.Factory.StartNew((o) =>
+                {
+                    bool r = false;
+                    Renci.SshNet.SshCommand cmd = ssh.RunCommand($"gphoto2 --port={o.ToString()} --set-config /main/capturesettings/exposurecompensation=34");
+                    r = cmd.ExitStatus == 0;
+                    if (!r)
+                        logIt($"Fail to set /main/capturesettings/exposurecompensation=34.");
+                    return r;
+                }, $"{camera["port"]}");
+                //cmd3 = ssh.RunCommand($"gphoto2 --port={camera["port"]} --capture-image-and-download --filename={fn} --force-overwrite");
             }
             // 4. take a picture on camera 2
             if (cameras.ContainsKey(2))
             {
                 camera = (Dictionary<string, string>)cameras[2];
+                string fn = $"{camera["id"]}.jpg";
+                Renci.SshNet.SshCommand cmd1 = ssh.RunCommand($"./LEDControl -txdata=04");
+                Renci.SshNet.SshCommand cmd3 = ssh.RunCommand($"gphoto2 --port={camera["port"]} --capture-image-and-download --filename={fn} --force-overwrite");
+                var t = Task<bool>.Factory.StartNew((o) =>
+                {
+                    bool r = false;
+                    r = downloadFile(o.ToString(), args);
+                    if (!r)
+                        logIt($"Fail to download {o}.");
+                    return r;
+                }, $"{System.IO.Path.Combine(target, $"{fn}")}");
+                tasks.Add(t);
             }
             // 5. take a picture on camera 3
-            if (cameras.ContainsKey(3))
+            if (cameras.ContainsKey(3) && cameras.ContainsKey(4) && cameras.ContainsKey(5) && cameras.ContainsKey(6))
             {
-                camera = (Dictionary<string, string>)cameras[3];
+                // turn on light 2+4
+                Renci.SshNet.SshCommand cmd1 = ssh.RunCommand($"./LEDControl -txdata=06");
+                Task t3 = Task<bool>.Run(() => 
+                {
+                    Dictionary<string, string> c3 = (Dictionary<string, string>)cameras[3];
+                    Renci.SshNet.SshCommand cmd3 = ssh.RunCommand($"gphoto2 --port={c3["port"]} --capture-image-and-download --filename={c3["id"]}.jpg --force-overwrite");
+                    return cmd3.ExitStatus == 0;
+                });
+                Task t4 = Task<bool>.Run(() =>
+                {
+                    Dictionary<string, string> c4 = (Dictionary<string, string>)cameras[4];
+                    Renci.SshNet.SshCommand cmd3 = ssh.RunCommand($"gphoto2 --port={c4["port"]} --capture-image-and-download --filename={c4["id"]}.jpg --force-overwrite");
+                    return cmd3.ExitStatus == 0;
+                });
+                Task t5 = Task<bool>.Run(() =>
+                {
+                    Dictionary<string, string> c5 = (Dictionary<string, string>)cameras[5];
+                    Renci.SshNet.SshCommand cmd3 = ssh.RunCommand($"gphoto2 --port={c5["port"]} --capture-image-and-download --filename={c5["id"]}.jpg --force-overwrite");
+                    return cmd3.ExitStatus == 0;
+                });
+                Task t6 = Task<bool>.Run(() =>
+                {
+                    Dictionary<string, string> c6 = (Dictionary<string, string>)cameras[6];
+                    Renci.SshNet.SshCommand cmd3 = ssh.RunCommand($"gphoto2 --port={c6["port"]} --capture-image-and-download --filename={c6["id"]}.jpg --force-overwrite");
+                    return cmd3.ExitStatus == 0;
+                });
+                Task.WaitAll(new Task[] { t3, t4, t5, t6 });
+                var t = Task<bool>.Factory.StartNew((o) => 
+                {
+                    bool r = false;
+                    r = downloadFile($"{o.ToString()}", args);
+                    if (!r)
+                        logIt($"Fail to download 3.jpg.");
+                    return r;
+                }, $"{System.IO.Path.Combine(target,"3.jpg")}");
+                tasks.Add(t);
+                t = Task<bool>.Factory.StartNew((o) =>
+                {
+                    bool r = false;
+                    r = downloadFile($"{o.ToString()}", args);
+                    if (!r)
+                        logIt($"Fail to download 4.jpg.");
+                    return r;
+                }, $"{System.IO.Path.Combine(target, "4.jpg")}");
+                tasks.Add(t);
+                t = Task<bool>.Factory.StartNew((o) =>
+                {
+                    bool r = false;
+                    r = downloadFile($"{o.ToString()}", args);
+                    if (!r)
+                        logIt($"Fail to download 5.jpg.");
+                    return r;
+                }, $"{System.IO.Path.Combine(target, "5.jpg")}");
+                tasks.Add(t);
+                t = Task<bool>.Factory.StartNew((o) =>
+                {
+                    bool r = false;
+                    r = downloadFile($"{o.ToString()}", args);
+                    if (!r)
+                        logIt($"Fail to download 6.jpg.");
+                    return r;
+                }, $"{System.IO.Path.Combine(target, "6.jpg")}");
+                tasks.Add(t);
             }
-            // 6. take a picture on camera 4
-            if (cameras.ContainsKey(4))
+            // 6. take a picture on camera 1 with oev=-3
+            if (cameras.ContainsKey(1))
             {
-                camera = (Dictionary<string, string>)cameras[4];
+                camera = (Dictionary<string, string>)cameras[1];
+                // 1. take a picture on camera 1 with low light
+                // turn on light 1
+                string fn = $"{camera["id"]}-3.jpg";
+                Renci.SshNet.SshCommand cmd1 = ssh.RunCommand($"./LEDControl -txdata=01");
+                Renci.SshNet.SshCommand cmd3 = ssh.RunCommand($"gphoto2 --port={camera["port"]} --capture-image-and-download --filename={fn} --force-overwrite");
+                var t = Task<bool>.Factory.StartNew((o) =>
+                {
+                    bool r = false;
+                    r = downloadFile(o.ToString(), args);
+                    if (!r)
+                        logIt($"Fail to download {o}.");
+                    return r;
+                }, $"{System.IO.Path.Combine(target, $"{fn}")}");
+                tasks.Add(t);
+                Renci.SshNet.SshCommand cmd = ssh.RunCommand($"gphoto2 --port={camera["port"]} --set-config /main/capturesettings/exposurecompensation=0");
             }
-            // 7. take a picture on camera 5
-            if (cameras.ContainsKey(5))
+            Task.WaitAll(tasks.ToArray());
+            ret = true;
+            foreach(Task<bool> t in tasks)
             {
-                camera = (Dictionary<string, string>)cameras[5];
+                ret &= t.Result;
             }
-            // 8. take a picture on camera 6
-            if (cameras.ContainsKey(6))
-            {
-                camera = (Dictionary<string, string>)cameras[6];
-            }
+            return ret;
         }
     }
 }
