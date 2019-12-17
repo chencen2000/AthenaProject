@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -52,8 +53,8 @@ namespace CaptureImage
                 // start
                 //test(_args.Parameters);
                 //downloadThread();
-                //test2();
-                download_test();
+                test2();
+                //download_test();
             }
             else
             {
@@ -69,36 +70,38 @@ namespace CaptureImage
         {
             //Renci.SshNet.ConnectionInfo c = new Renci.SshNet.ConnectionInfo("10.1.1.103", "qa", new Renci.SshNet.PasswordAuthenticationMethod("qa", "qa"));
             Renci.SshNet.SshClient c = new Renci.SshNet.SshClient(args["ip"], "qa", "qa");
-            c.Connect();
+            try
+            {
+                c.Connect();
 
-            string[] ports = getCameras(c);
+                string[] ports = getCameras(c);
+                Dictionary<string, object> cameras = new Dictionary<string, object>();
+                foreach (string p in ports)
+                {
+                    Dictionary<string, string> prop = getCameraProperties(c, p);
+                    cameras.Add(p, prop);
+                    // look for camera id
+                }
 
-            //Renci.SshNet.ShellStream ss = c.CreateShellStream("test", 80, 32, 800, 600, 1024);
-            //ss.WriteLine("ls -l");
-            //List<string> response = new List<string>();
-            //string line = null;
-            //do
-            //{
-            //    line = ss.ReadLine(new TimeSpan(10000));
-            //    if (line != null)
-            //        response.Add(line);
+                // take photo
+                foreach (KeyValuePair<string, object> kvp in cameras)
+                {
+                    Renci.SshNet.SshCommand cmd = c.RunCommand($"gphoto2 --port={kvp.Key} --capture-image-and-download --filename=1.jpg --force-overwrite");
+                }
+            }
+            catch (Exception) { }
+            finally
+            {
+                try { c.Disconnect(); }
+                catch (Exception) { }
+            }
+            
+        }
+        static string lookForCamera(Dictionary<string,string> prop)
+        {
+            string ret = "";
 
-            //} while (line != null);
-            //logIt(string.Join(System.Environment.NewLine, response));
-
-            //response.Clear();
-            //ss.WriteLine("gphoto2 --list-ports");
-            //do
-            //{
-            //    line = ss.ReadLine(new TimeSpan(10000));
-            //    if (line != null)
-            //        response.Add(line);
-
-            //} while (line != null);
-            //logIt(string.Join(System.Environment.NewLine, response));
-
-            //ss.Close();
-            c.Disconnect();
+            return ret;
         }
         static void download_test()
         {
@@ -120,16 +123,8 @@ namespace CaptureImage
 
         static void test2()
         {
-            string s1 = @"Model                          Port            
-----------------------------------------------------------
-Sony Alpha-A6000 (Control)     usb:001,010     
-Sony Alpha-A6000 (Control)     usb:001,011     
-Sony Alpha-A6000 (Control)     usb:001,012     
-";
-
-            Regex r = new Regex(@"\s*(Sony.+)\s+(usb.+)\s*");
-            var m = r.Matches(s1);
-
+            var appSettings = ConfigurationManager.AppSettings;
+            
         }
 
         static string[] getCameras(Renci.SshNet.SshClient ssh)
@@ -159,10 +154,18 @@ Sony Alpha-A6000 (Control)     usb:001,012
         {
             Dictionary<string, string> ret = new Dictionary<string, string>();
             logIt($"getCameraProperties: ++ port={cameraPort}");
-            Renci.SshNet.SshCommand cmd = ssh.RunCommand($"gphoto2 --summary --ports={cameraPort}");
+            Renci.SshNet.SshCommand cmd = ssh.RunCommand($"gphoto2 --summary --port={cameraPort}");
             if (cmd.ExitStatus == 0)
             {
-
+                Regex r = new Regex(@"Manufacturer: (.+)[\s+]Model: (.+)\s+Version: (.+)\s+Serial Number: (\d+)");
+                Match m = r.Match(cmd.Result);
+                if (m.Success && m.Groups.Count>4)
+                {
+                    ret["maker"] = m.Groups[1].Value.Trim();
+                    ret["model"] = m.Groups[2].Value.Trim();
+                    ret["version"] = m.Groups[3].Value.Trim();
+                    ret["serialnumber"] = m.Groups[4].Value.Trim();
+                }
             }
             logIt("getCameraProperties: --");
             return ret;
