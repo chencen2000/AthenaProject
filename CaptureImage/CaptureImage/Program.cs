@@ -36,6 +36,7 @@ namespace CaptureImage
                 _args.Parameters.Add("imei", string.IsNullOrEmpty(appSettings["imei"]) ? "output" : appSettings["imei"]);
             if (!_args.Parameters.ContainsKey("ip"))
                 _args.Parameters.Add("ip", string.IsNullOrEmpty(appSettings["ip"]) ? "10.1.1.103" : appSettings["ip"]);
+                
             try
             {
                 string s = System.IO.Path.Combine(_args.Parameters["dir"], _args.Parameters["imei"]);
@@ -240,6 +241,17 @@ namespace CaptureImage
             logIt("getAllCameras: --");
             return cameras;
         }
+        static bool controlLED(Renci.SshNet.SshClient ssh, string cmd, int delay = 0)
+        {
+            bool ret = false;
+            Renci.SshNet.SshCommand c = ssh.RunCommand($"./LEDControl -txdata={cmd}");
+            if (c.ExitStatus == 0)
+            {
+                ret = true;
+                System.Threading.Thread.Sleep(delay);
+            }
+            return ret;
+        }
         static bool startProcess(Renci.SshNet.SshClient ssh, Dictionary<int, object> cameras, System.Collections.Specialized.StringDictionary args)
         {
             Dictionary<string, string> camera = null;
@@ -247,13 +259,21 @@ namespace CaptureImage
             string target = args["target"];
             List<Task<bool>> tasks = new List<Task<bool>>();
             Task<bool> set_exposure = null;
-            if(cameras.ContainsKey(1))
+            int delay = 0;
+            if(args.ContainsKey("delay") && Int32.TryParse(args["delay"], out delay))
+            {
+                logIt($"delay {delay}ms after LED on.");
+                System.Console.WriteLine($"delay {delay}ms after LED on.");
+            }
+            controlLED(ssh, "00");
+            if (cameras.ContainsKey(1))
             {
                 camera = (Dictionary<string, string>)cameras[1];
                 // 1. take a picture on camera 1 with low light
                 // turn on light 1
                 string fn = $"{camera["id"]}-2.jpg";
-                Renci.SshNet.SshCommand cmd1 = ssh.RunCommand($"./LEDControl -txdata=01");
+                //Renci.SshNet.SshCommand cmd1 = ssh.RunCommand($"./LEDControl -txdata=01");
+                controlLED(ssh, "01", delay);
                 Renci.SshNet.SshCommand cmd3 = ssh.RunCommand($"gphoto2 --port={camera["port"]} --capture-image-and-download --filename={fn} --force-overwrite");
                 var t = Task<bool>.Factory.StartNew((o) =>
                 {
@@ -267,7 +287,8 @@ namespace CaptureImage
 
                 // 2. take a picture on camera 1 with high light with exposurecompensation=0
                 fn = $"{camera["id"]}-1.jpg";
-                cmd1 = ssh.RunCommand($"./LEDControl -txdata=02");
+                //cmd1 = ssh.RunCommand($"./LEDControl -txdata=02");
+                controlLED(ssh, "02", delay);
                 cmd3 = ssh.RunCommand($"gphoto2 --port={camera["port"]} --capture-image-and-download --filename={fn} --force-overwrite");
                 t = Task<bool>.Factory.StartNew((o) =>
                 {
@@ -295,7 +316,8 @@ namespace CaptureImage
             {
                 camera = (Dictionary<string, string>)cameras[2];
                 string fn = $"{camera["id"]}.jpg";
-                Renci.SshNet.SshCommand cmd1 = ssh.RunCommand($"./LEDControl -txdata=04");
+                //Renci.SshNet.SshCommand cmd1 = ssh.RunCommand($"./LEDControl -txdata=04");
+                controlLED(ssh, "04", delay);
                 Renci.SshNet.SshCommand cmd3 = ssh.RunCommand($"gphoto2 --port={camera["port"]} --capture-image-and-download --filename={fn} --force-overwrite");
                 var t = Task<bool>.Factory.StartNew((o) =>
                 {
@@ -311,7 +333,8 @@ namespace CaptureImage
             if (cameras.ContainsKey(3) && cameras.ContainsKey(4) && cameras.ContainsKey(5) && cameras.ContainsKey(6))
             {
                 // turn on light 2+4
-                Renci.SshNet.SshCommand cmd1 = ssh.RunCommand($"./LEDControl -txdata=06");
+                //Renci.SshNet.SshCommand cmd1 = ssh.RunCommand($"./LEDControl -txdata=06");
+                controlLED(ssh, "06", delay);
                 Task t3 = Task<bool>.Run(() => 
                 {
                     Dictionary<string, string> c3 = (Dictionary<string, string>)cameras[3];
@@ -381,7 +404,8 @@ namespace CaptureImage
                 // 1. take a picture on camera 1 with low light
                 // turn on light 1
                 string fn = $"{camera["id"]}-3.jpg";
-                Renci.SshNet.SshCommand cmd1 = ssh.RunCommand($"./LEDControl -txdata=01");
+                //Renci.SshNet.SshCommand cmd1 = ssh.RunCommand($"./LEDControl -txdata=01");
+                controlLED(ssh, "01", delay);
                 Renci.SshNet.SshCommand cmd3 = ssh.RunCommand($"gphoto2 --port={camera["port"]} --capture-image-and-download --filename={fn} --force-overwrite");
                 var t = Task<bool>.Factory.StartNew((o) =>
                 {
