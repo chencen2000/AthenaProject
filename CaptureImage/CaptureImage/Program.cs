@@ -274,6 +274,7 @@ namespace CaptureImage
                 string fn = $"{camera["id"]}-2.jpg";
                 //Renci.SshNet.SshCommand cmd1 = ssh.RunCommand($"./LEDControl -txdata=01");
                 controlLED(ssh, "01", delay);
+                Renci.SshNet.SshCommand cmd1 = ssh.RunCommand($"gphoto2 --port={camera["port"]} --set-config /main/capturesettings/exposurecompensation=19");
                 Renci.SshNet.SshCommand cmd3 = ssh.RunCommand($"gphoto2 --port={camera["port"]} --capture-image-and-download --filename={fn} --force-overwrite");
                 var t = Task<bool>.Factory.StartNew((o) =>
                 {
@@ -303,7 +304,7 @@ namespace CaptureImage
                 set_exposure = Task<bool>.Factory.StartNew((o) =>
                 {
                     bool r = false;
-                    Renci.SshNet.SshCommand cmd = ssh.RunCommand($"gphoto2 --port={o.ToString()} --set-config /main/capturesettings/exposurecompensation=34");
+                    Renci.SshNet.SshCommand cmd = ssh.RunCommand($"gphoto2 --port={o.ToString()} --set-config /main/capturesettings/exposurecompensation=30");
                     r = cmd.ExitStatus == 0;
                     if (!r)
                         logIt($"Fail to set /main/capturesettings/exposurecompensation=34.");
@@ -416,7 +417,7 @@ namespace CaptureImage
                     return r;
                 }, $"{System.IO.Path.Combine(target, $"{fn}")}");
                 tasks.Add(t);
-                Renci.SshNet.SshCommand cmd = ssh.RunCommand($"gphoto2 --port={camera["port"]} --set-config /main/capturesettings/exposurecompensation=0");
+                Renci.SshNet.SshCommand cmd = ssh.RunCommand($"gphoto2 --port={camera["port"]} --set-config /main/capturesettings/exposurecompensation=19");
             }
             Task.WaitAll(tasks.ToArray());
             ret = true;
