@@ -1,7 +1,11 @@
+import io
 import logging
 import gphoto2 as gp
+import time
+from PIL import Image
 
-logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s', level=logging.WARNING)
+logging.basicConfig(format='%(asctime)s: %(levelname)s: %(name)s: %(message)s', level=logging.WARNING)
+logging.warn("start")
 
 def test():
     error, camera = gp.gp_camera_new()
@@ -25,9 +29,18 @@ def test_preview():
     callback_obj = gp.check_result(gp.use_python_logging())
     camera = gp.Camera()
     camera.init()
-    camera_file = camera.capture_preview()
-    camera_file.save("test.jpg")
+    frame = 50
+    image = None
+    while frame > 0 :
+        logging.warn("get frame. No.{}".format(frame))
+        camera_file = camera.capture_preview()        
+        err, buf = gp.gp_file_get_data_and_size(camera_file)
+        image = Image.open(io.BytesIO(buf))
+        frame -= 1
+        # camera_file.save("test.jpg")        
     camera.exit()
+    if image is not None:
+        pass
 
 def test_select_camera():
     camera_list = list(gp.Camera.autodetect())
@@ -50,3 +63,4 @@ def test_select_camera():
 # err, devs = gp.gp_camera_autodetect()
 # all_devs = list(devs)
 # test4()
+test_preview()
