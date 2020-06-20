@@ -24,3 +24,4 @@ sudo apt install libgphoto2-dev
 sudo apt install pkg-config
 - install gphoto2 python
 sudo pip3 install gphoto2
+
