@@ -15,3 +15,12 @@ sudo gphoto2 --stdout --capture-movie | sudo ffmpeg -i - -vcodec rawvideo -pix_f
 - receive
 sudo ffplay /dev/video0
   
+install gphoto2 python
+- install build essential
+sudo apt install build-essential
+- install libgphoto2
+sudo apt install libgphoto2-dev
+- install pkg-config
+sudo apt install pkg-config
+- install gphoto2 python
+sudo pip3 install gphoto2
