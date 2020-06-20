@@ -12,7 +12,7 @@ def test():
     print(text.text)
     error = gp.gp_camera_exit(camera)
 
-def test2():
+def test_capture():
     callback_obj = gp.check_result(gp.use_python_logging())
     camera = gp.Camera()
     camera.init()
@@ -21,7 +21,7 @@ def test2():
     camera_file.save("test.jpg")
     camera.exit()
 
-def test4():
+def test_preview():
     callback_obj = gp.check_result(gp.use_python_logging())
     camera = gp.Camera()
     camera.init()
@@ -29,7 +29,7 @@ def test4():
     camera_file.save("test.jpg")
     camera.exit()
 
-def test3():
+def test_select_camera():
     camera_list = list(gp.Camera.autodetect())
     if not camera_list:
         return 1
@@ -47,6 +47,6 @@ def test3():
 
 
 # test2()
-err, devs = gp.gp_camera_autodetect()
-all_devs = list(devs)
-test4()
+# err, devs = gp.gp_camera_autodetect()
+# all_devs = list(devs)
+# test4()
