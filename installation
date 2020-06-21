@@ -1,0 +1,5 @@
+After install Ubuntu 20.04
+
+1. install ssh
+sudo apt install ssh
+
