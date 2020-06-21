@@ -40,7 +40,7 @@ def test_preview():
         # camera_file.save("test.jpg")        
     camera.exit()
     if image is not None:
-        pass
+        image.save("test.jpg")
 
 def test_select_camera():
     camera_list = list(gp.Camera.autodetect())
