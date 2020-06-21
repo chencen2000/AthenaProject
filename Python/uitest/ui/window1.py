@@ -6,7 +6,7 @@ Module implementing MainWindow.
 
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QMainWindow, QMessageBox
-
+from PyQt5.QtGui import QPixmap
 from .Ui_window1 import Ui_MainWindow
 
 
@@ -29,5 +29,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         """
         Slot documentation goes here.
         """
-        QMessageBox.aboutQt(self)
+        pixmap = QPixmap('test.jpg')
+        self.label.setPixmap(pixmap)
+        # QMessageBox.aboutQt(self)
         
