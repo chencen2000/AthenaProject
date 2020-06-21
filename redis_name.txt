@@ -1,0 +1,17 @@
+三个相机的名字：
+Camera_TP
+camera on the top
+
+Camera_SS
+camera on the short side
+
+Camera_LS
+camera on the long side
+
+redis camera info:
+Camera_TP.manufacturer
+Camera_TP.model
+Camera_TP.addr
+Camera_TP.serialnumber
+Camera_TP.name
+
