@@ -15,3 +15,5 @@ sudo pip3 install gphoto2
 5. install git
 sudo apt install git
 
+6. optional install vs code
+sudo snap install --classic code
