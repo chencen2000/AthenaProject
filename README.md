@@ -1,7 +1,7 @@
 # AthenaProject
 for Athena project.
 
-enable gphoto2 live view 
+enable gphoto2 live view optional
 - install ffmpeg
 sudo apt install ffmpeg
 - install v4l-utils

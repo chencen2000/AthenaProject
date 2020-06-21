@@ -1,3 +1,9 @@
+0. install Ubuntu 20.04
+select minial installation
+username: athena
+password: Athena8880$
+
+
 After install Ubuntu 20.04
 
 1. install ssh and redis server
@@ -19,3 +25,6 @@ sudo apt install git
 
 6. optional install vs code
 sudo snap install --classic code
+
+7. set ATHENAHOME
+export ATHENAHOME=$HOME/Athena
