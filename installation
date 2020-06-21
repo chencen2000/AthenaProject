@@ -3,3 +3,15 @@ After install Ubuntu 20.04
 1. install ssh
 sudo apt install ssh
 
+2. install python3 pip3, 
+sudo apt install python3-pip
+
+3. install gphoto2
+sudo apt install gphoto2 libgphoto2-dev
+
+4. install gphoto2 python
+sudo pip3 install gphoto2
+
+5. install git
+sudo apt install git
+
