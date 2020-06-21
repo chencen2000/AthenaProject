@@ -1,7 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE Tasks SYSTEM "Tasks-6.0.dtd">
 <!-- eric6 tasks file for project uitest -->
-<!-- Saved: 2020-06-21, 00:22:55 -->
+<!-- Saved: 2020-06-21, 12:26:00 -->
 <Tasks version="6.0">
   <ProjectScanFilter></ProjectScanFilter>
+  <Task priority="1" completed="False" type="2" uid="{35bd3358-d035-4f7c-ab63-e8e3ed0d10ba}">
+    <Summary>WARNING: Any manual changes made to this file will be lost when pyuic5 is</Summary>
+    <Description></Description>
+    <Created>2020-06-21, 12:25:24</Created>
+    <Resource>
+      <Filename>ui/Ui_window1.py</Filename>
+      <Linenumber>7</Linenumber>
+    </Resource>
+  </Task>
 </Tasks>

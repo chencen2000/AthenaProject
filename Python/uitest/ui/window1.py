@@ -32,4 +32,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         pixmap = QPixmap('test.jpg')
         self.label.setPixmap(pixmap)
         # QMessageBox.aboutQt(self)
-        
+    
+    @pyqtSlot()
+    def on_pushButton_2_clicked(self):
+        """
+        Slot documentation goes here.
+        """
+        QMessageBox.aboutQt(self)
