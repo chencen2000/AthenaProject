@@ -1,7 +1,10 @@
 - install  the MinimalCD
 use this ref: http://wiki.dennyhalim.com/ubuntu-minimal-desktop
 
+Enable auto-logon on systemd: https://www.blackmanticore.com/8683a884ca8aad72b46442e0b7196cef
+
 1. install mini gui
 sudo apt install xserver-xorg-core xinit xdm openbox xterm
 after install used 121M memory
 
+Note: xdm is optional, don't need if auto-logon enabled
