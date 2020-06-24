@@ -20,7 +20,7 @@ sudo pip3 install gphoto2
 4.2 install redis python
 sudo pip3 install redis
 4.3 install pyqt5 python
-sudo pip3 install pyqt5
+sudo pip3 install pyqt5 pillow
 
 
 5. install git 
