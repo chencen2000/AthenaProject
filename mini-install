@@ -1,4 +1,7 @@
 - install  the MinimalCD
 use this ref: http://wiki.dennyhalim.com/ubuntu-minimal-desktop
 
-1. 
+1. install mini gui
+sudo apt install xserver-xorg-core xinit xdm openbox xterm
+after install used 121M memory
+
