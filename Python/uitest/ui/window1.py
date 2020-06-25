@@ -4,10 +4,11 @@
 Module implementing MainWindow.
 """
 
+from PyQt5 import QtWidgets
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QMainWindow, QMessageBox
 from PyQt5.QtGui import QPixmap
-from .Ui_window1 import Ui_MainWindow
+from Ui_window1 import Ui_MainWindow
 from PIL import Image
 from PIL.ImageQt import ImageQt
 import gphoto2 as gp
@@ -127,3 +128,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             camera_tp.init()
         self.logger.info("init_camera: --")
         return camera_tp
+
+if __name__ == "__main__":
+    import sys
+    app = QtWidgets.QApplication(sys.argv)
+    w = MainWindow()
+    w.show()
+    sys.exit(app.exec_())
