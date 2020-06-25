@@ -58,9 +58,29 @@ def test_select_camera():
     error, text = gp.gp_camera_get_summary(camera)
     print(text.text)
 
+def test_camera_config():
+    callback_obj = gp.check_result(gp.use_python_logging())
+    camera = gp.Camera()
+    camera.init()
+    config = camera.get_config()
+    iso_config = config.get_child_by_name("iso")
+    v = iso_config.get_value()
+    iso_config.set_value('Auto ISO')
+    ec = config.get_child_by_name("exposurecompensation")
+    v = ec.get_value()
+    ec.set_value('3')
+    camera.set_config(config)
+    camera.exit()
+
+
+def read_matedata(file):
+    with open(file, 'rb') as image_file:
+        my_image = Image(image_file)
+
 
 # test2()
 # err, devs = gp.gp_camera_autodetect()
 # all_devs = list(devs)
 # test4()
-test_preview()
+# test_preview()
+test_camera_config()

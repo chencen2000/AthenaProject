@@ -77,8 +77,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def preview_thread_proc(self):
         self.logger.info("preview_thread_proc: ++")
-        if self.preview_quit_event is not None:            
-            camera = self.init_camera()
+        if self.preview_quit_event is not None:  
+            r = redis.Redis()          
+            camera = self.init_camera(r)
             frame=0
             while not self.preview_quit_event.is_set():
                 # time.sleep(1)
@@ -91,12 +92,30 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     imageQ = ImageQt(image)
                     pixmap = QPixmap.fromImage(imageQ)
                     self.label.setPixmap(pixmap)
+                # read setting
+                iso, expc = r.mget(["Camera_TP.iso", "Camera_TP.exposurecompensation"])
+                if iso is not None or expc is not None:
+                    config = camera.get_config()
+                    save_config = False
+                    if iso is not None:
+                        c = config.get_child_by_name("iso")
+                        v = c.get_value()
+                        if v != iso.decode('utf-8'):
+                            c.set_value(iso.decode('utf-8'))
+                            save_config = True
+                    if expc is not None:
+                        c = config.get_child_by_name("exposurecompensation")
+                        v = c.get_value()
+                        if v != expc.decode('utf-8'):
+                            c.set_value(expc.decode('utf-8'))
+                            save_config = True
+                    if save_config:
+                        camera.set_config(config)
             camera.exit()
         self.logger.info("preview_thread_proc: --")
     
-    def init_camera(self):        
+    def init_camera(self, r):        
         self.logger.info("init_camera: ++")
-        r = redis.Redis()
         data = r.get("Camera_TP.address")
         if data is not None:
             addr = data.decode("utf-8")
