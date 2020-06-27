@@ -42,6 +42,28 @@ def test_preview():
     if image is not None:
         image.save("test.jpg")
 
+def test_select_camera_by_serialnumber(sn):
+    ret = None
+    cnt, cameras = gp.gp_camera_autodetect()
+    for i in range(cnt):
+        c = cameras[i]
+        if len(c) == 2:
+            addr = c[1]
+            port_info_list = gp.PortInfoList()
+            port_info_list.load()
+            idx = port_info_list.lookup_path(addr)
+            camera = gp.Camera()
+            camera.set_port_info(port_info_list[idx])
+            camera.init()
+            config = camera.get_config()
+            OK, sn = gp.gp_widget_get_child_by_name(config, 'serialnumber')
+            if OK >= gp.GP_OK:
+                sn_text = sn.get_value()
+                if sn == sn_text:
+                    pass
+            camera.exit()            
+    pass
+
 def test_select_camera():
     camera_list = list(gp.Camera.autodetect())
     if not camera_list:
@@ -78,9 +100,10 @@ def read_matedata(file):
         my_image = Image(image_file)
 
 
+test_select_camera_by_serialnumber("")
 # test2()
 # err, devs = gp.gp_camera_autodetect()
 # all_devs = list(devs)
 # test4()
 # test_preview()
-test_camera_config()
+# test_camera_config()

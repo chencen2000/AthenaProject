@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "env": {"DISPLAY":"localhost:10.0"}
+            "env": {"DISPLAY":":0"}
         }
     ]
 }
