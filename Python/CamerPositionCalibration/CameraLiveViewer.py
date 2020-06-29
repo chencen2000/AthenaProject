@@ -5,14 +5,16 @@ from Ui_CameraLiveViewer import Ui_MainWindow
 from Ui_settings import Ui_Dialog
 from PIL import Image, ImageDraw
 from PIL.ImageQt import ImageQt
-import gphoto2 as gp
 import os
 import io
-import redis
+import sys
 import time
 import logging
 import configparser
 import threading
+if sys.platform=='linux':
+    import gphoto2 as gp
+    import redis
 
 logging.basicConfig(format='%(asctime)s: %(levelname)s: %(name)s: %(message)s', level=logging.INFO)
 
@@ -36,10 +38,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
         self.setupUi(self)
+        # self.setFixedSize(1024,768)
         self.topButton.clicked.connect(lambda x: self.radioButton_clicked(self.topButton))
         self.ssdieButton.clicked.connect(lambda x: self.radioButton_clicked(self.ssdieButton))
         self.lsideButton.clicked.connect(lambda x: self.radioButton_clicked(self.lsideButton))
         self.settingButton.clicked.connect(self.show_settingsDlg)
+        self.zoomInButton.clicked.connect(self.zoomInButton_clicked)
+        self.zoomOutButton.clicked.connect(self.zoomOutButton_clicked)
         # show default image
         self.labelImage.setText('')
         self.settingData={'line_width':15}
@@ -53,15 +58,42 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # self.rc.set("Camera_SS.serialnumber", self.config['location']['camera_ss'])
         self.camera_data = None
         # quit = QAction("Quit", self)
+        self.image_ratio = 0.0
 
     def closeEvent(self, event):        
         logging.info("close event: ++")
         if self.camera_data is not None:
             self.camera_stop_liveview()
     
+    def zoomInButton_clicked(self):
+        if self.image_ratio > 0:
+            delta = self.image_ratio * 0.1
+            self.image_ratio += delta
+            if sys.platform == 'win32':
+                if self.topButton.isChecked():
+                    self.radioButton_clicked(self.topButton)
+                if self.ssdieButton.isChecked():
+                    self.radioButton_clicked(self.ssdieButton)
+                if self.lsideButton.isChecked():
+                    self.radioButton_clicked(self.lsideButton)
+        pass
+
+    def zoomOutButton_clicked(self):
+        if self.image_ratio > 0:
+            delta = self.image_ratio * 0.1
+            self.image_ratio -= delta
+            if sys.platform == 'win32':
+                if self.topButton.isChecked():
+                    self.radioButton_clicked(self.topButton)
+                if self.ssdieButton.isChecked():
+                    self.radioButton_clicked(self.ssdieButton)
+                if self.lsideButton.isChecked():
+                    self.radioButton_clicked(self.lsideButton)
+        pass
+
     def topButton_clicked(self):
         logging.info("topButton_clicked: ++")
-        if self.topButton.isChecked:
+        if self.topButton.isChecked():
             logging.info("topButton_clicked: topButton is checked.")
             img = Image.open(r"D:\\projects\\images\\0623\\1.jpg")
             self.labelImage.setPixmap(self.handle_image(img))
@@ -72,29 +104,34 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if button is self.topButton:
             # self.topButton_clicked()
             camera_name = 'Camera_TP'
+            img = Image.open(r"D:\\projects\\images\\0623\\1.jpg")
             pass
         elif button is self.ssdieButton:
             camera_name = 'Camera_SS'
-            pass
             # if button.isChecked:
-            #     img = Image.open(r"D:\\projects\\images\\0623\\3.jpg")
+            img = Image.open(r"D:\\projects\\images\\0623\\3.jpg")
             #     self.labelImage.setPixmap(self.handle_image(img))
         elif button is self.lsideButton:
-            camera_name = 'Camera_SS'
-            pass
+            camera_name = 'Camera_LS'
             # if button.isChecked:
-            #     img = Image.open(r"D:\\projects\\images\\0623\\6.jpg")
+            img = Image.open(r"D:\\projects\\images\\0623\\6.jpg")
             #     self.labelImage.setPixmap(self.handle_image(img))
-        self.handle_camera_start(camera_name)
+        if not self.handle_camera_start(camera_name):
+            self.labelImage.setPixmap(self.handle_image(img))
+            pass
 
     def handle_image(self, img):
         w, h = img.size
+        if self.image_ratio == 0:            
+            sz = self.labelImage.size()
+            self.image_ratio = min(sz.width()/w, sz.height()/h)
         draw = ImageDraw.Draw(img) 
         draw.line((0,int(h/2), w,int(h/2)), fill=128, width=15)
         draw.line((int(w/2),0, int(w/2),h), fill=128, width=15)
         imageQ = ImageQt(img)
         pixmap = QPixmap.fromImage(imageQ)
-        return pixmap.scaledToHeight(600)
+        return pixmap.scaledToHeight(int(h*self.image_ratio))
+        # return pixmap
 
     def show_settingsDlg(self):
         logging.info("show_settingsDlg: ++")
@@ -107,19 +144,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         logging.info("show_settingsDlg: --")
 
     def handle_camera_start(self, camera_name):
-        same_camera = False
-        # check if same camera
-        if self.camera_data is not None:
-            if 'name' in self.camera_data.keys():
-                if self.camera_data['name'] == camera_name:
-                    same_camera = True
-        if not same_camera:
+        ret = False
+        if sys.platform == 'linux':
+            same_camera = False
+            # check if same camera
             if self.camera_data is not None:
-                # stop current live view
-                self.camera_stop_liveview()
-                pass
-            # start live view
-            self.camera_start_liveview(camera_name)
+                if 'name' in self.camera_data.keys():
+                    if self.camera_data['name'] == camera_name:
+                        same_camera = True
+            if not same_camera:
+                if self.camera_data is not None:
+                    # stop current live view
+                    self.camera_stop_liveview()
+                    pass
+                # start live view
+                ret = self.camera_start_liveview(camera_name)
+            else:
+                ret = True
+        return ret
 
     def camera_stop_liveview(self):
         logging.info("camera_stop_liveview: ++")
@@ -135,6 +177,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         logging.info("camera_stop_liveview: --")
 
     def camera_start_liveview(self, camera_name):
+        ret = False
         logging.info("camera_start_liveview: ++")
         camera = self.camera_find_by_name(camera_name)
         if camera is None:
@@ -147,7 +190,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             t = threading.Thread(target=self.camera_liveview_thread, daemon=True) 
             self.camera_data['thread'] = t
             t.start()
-        logging.info("camera_start_liveview: --")
+            ret = True
+        logging.info("camera_start_liveview: -- ret={}".format(ret))
+        return ret
 
     def camera_liveview_thread(self):
         logging.info("camera_liveview_thread: ++")
@@ -207,4 +252,5 @@ if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     w = MainWindow()
     w.show()
+    # w.showMaximized()
     sys.exit(app.exec_())
