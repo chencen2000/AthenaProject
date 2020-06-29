@@ -104,17 +104,25 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if button is self.topButton:
             # self.topButton_clicked()
             camera_name = 'Camera_TP'
-            img = Image.open(r"D:\\projects\\images\\0623\\1.jpg")
-            pass
+            try:
+                img = Image.open(r"D:\\projects\\images\\0623\\1.jpg")
+            except:
+                pass
         elif button is self.ssdieButton:
             camera_name = 'Camera_SS'
             # if button.isChecked:
-            img = Image.open(r"D:\\projects\\images\\0623\\3.jpg")
+            try:
+                img = Image.open(r"D:\\projects\\images\\0623\\3.jpg")
+            except:
+                pass
             #     self.labelImage.setPixmap(self.handle_image(img))
         elif button is self.lsideButton:
             camera_name = 'Camera_LS'
             # if button.isChecked:
-            img = Image.open(r"D:\\projects\\images\\0623\\6.jpg")
+            try:
+                img = Image.open(r"D:\\projects\\images\\0623\\6.jpg")
+            except:
+                pass
             #     self.labelImage.setPixmap(self.handle_image(img))
         if not self.handle_camera_start(camera_name):
             self.labelImage.setPixmap(self.handle_image(img))
@@ -251,6 +259,6 @@ if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
     w = MainWindow()
-    w.show()
-    # w.showMaximized()
+    # w.show()
+    w.showMaximized()
     sys.exit(app.exec_())
