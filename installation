@@ -10,7 +10,7 @@ After install Ubuntu 20.04
 sudo apt install ssh redis
 
 2. install python3 pip3, 
-sudo apt install python3-pip
+sudo apt install python3-pip python3-opencv python3-opencv-apps
 
 3. install gphoto2 and qt5
 sudo apt install gphoto2 libgphoto2-dev qt5-default
@@ -20,7 +20,9 @@ sudo pip3 install gphoto2
 4.2 install redis python
 sudo pip3 install redis
 4.3 install pyqt5 python
-sudo pip3 install pyqt5 pillow
+sudo pip3 install pyqt5
+4.4 all other python sdk
+sudo pip3 install willow imutils pandas scikit-image
 
 
 5. install git 
