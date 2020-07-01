@@ -45,6 +45,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.settingButton.clicked.connect(self.show_settingsDlg)
         self.zoomInButton.clicked.connect(self.zoomInButton_clicked)
         self.zoomOutButton.clicked.connect(self.zoomOutButton_clicked)
+        self.calibrateButton.clicked.connect(self.calibrate_handler)
         # show default image
         self.labelImage.setText('')
         self.settingData={'line_width':15}
@@ -65,6 +66,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.camera_data is not None:
             self.camera_stop_liveview()
     
+    def calibrate_handler(self):
+        logging.info("close calibrate_handler: ++")
+        pass
+
     def zoomInButton_clicked(self):
         if self.image_ratio > 0:
             delta = self.image_ratio * 0.1
