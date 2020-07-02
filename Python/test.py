@@ -29,14 +29,25 @@ def test_preview():
     callback_obj = gp.check_result(gp.use_python_logging())
     camera = gp.Camera()
     camera.init()
-    frame = 50
+    sn_config = camera.get_single_config("serialnumber")
+    frame = 0
     image = None
-    while frame > 0 :
+    while frame <= 100 :
         logging.warn("get frame. No.{}".format(frame))
-        camera_file = camera.capture_preview()        
-        err, buf = gp.gp_file_get_data_and_size(camera_file)
-        image = Image.open(io.BytesIO(buf))
-        frame -= 1
+        try:
+            camera_file = camera.capture_preview()        
+            err, buf = gp.gp_file_get_data_and_size(camera_file)
+            image = Image.open(io.BytesIO(buf))
+            frame += 1
+            if frame==20 or frame==50 or frame ==90:
+                file_path = camera.capture(gp.GP_CAPTURE_IMAGE)
+                camera_file = camera.file_get(file_path.folder, file_path.name, gp.GP_FILE_TYPE_NORMAL)
+                camera_file.save("test_{}.jpg".format(frame))    
+                camera.exit()
+                camera = gp.Camera()
+                camera.init()
+        except:
+            pass
         # camera_file.save("test.jpg")        
     camera.exit()
     if image is not None:
@@ -100,10 +111,10 @@ def read_matedata(file):
         my_image = Image(image_file)
 
 
-test_select_camera_by_serialnumber("")
+# test_select_camera_by_serialnumber("")
 # test2()
 # err, devs = gp.gp_camera_autodetect()
 # all_devs = list(devs)
 # test4()
-# test_preview()
+test_preview()
 # test_camera_config()
