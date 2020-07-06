@@ -200,6 +200,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.camera_worker = None
         # quit = QAction("Quit", self)
         self.image_ratio = 0.0
+        self.current_image= None
+        self.current_image_lock=threading.Lock()
 
     def closeEvent(self, event):        
         logging.info("close event: ++")
@@ -209,8 +211,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.camera_worker.stop_camera_preview()
     
     def test_button(self):
-        if self.config is not None:
-            pass
+        if self.current_image is not None:
+            self.current_image_lock.acquire()
+            self.current_image.save('test_liveview.jpg')
+            self.current_image_lock.release()
         pass
 
     def calibrate_handler(self):
@@ -299,18 +303,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         except:
             pass
         if camera_name == 'Camera_TP':
-            ret = handle_top_image(img)
+            ret = self.handle_top_image(img)
         elif camera_name == 'Camera_SS':
-            pass
+            ret = self.handle_shortside_image(img)
         elif camera_name == 'Camera_LS':
-            pass
+            ret = self.handle_longside_image(img)
         else:
             draw = ImageDraw.Draw(img) 
             draw.line((0,int(h/2), w,int(h/2)), fill=128, width=4)
             draw.line((int(w/2),0, int(w/2),h), fill=128, width=4)
-            imageQ = ImageQt(img)
-            pixmap = QPixmap.fromImage(imageQ)
-            ret = pixmap.scaledToHeight(int(h*self.image_ratio))
+            ret = img
+            # imageQ = ImageQt(img)
+            # pixmap = QPixmap.fromImage(imageQ)
+            # ret = pixmap.scaledToHeight(int(h*self.image_ratio))
         # return pixmap
         return ret
 
@@ -339,21 +344,86 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         return ret 
 
     def on_frame_arrival(self, frame):
-        self.labelImage.setPixmap(self.handle_image(frame)) 
+        img = self.handle_image(frame)
+        self.current_image_lock.acquire()
+        self.current_image = img
+        self.current_image_lock.release()
+        w, h = img.size
+        imageQ = ImageQt(img)
+        pixmap = QPixmap.fromImage(imageQ)
+        # pixmap.scaledToHeight(int(h*self.image_ratio))
+        ret = pixmap.scaledToHeight(int(h*self.image_ratio))
+        self.labelImage.setPixmap(ret) 
+        # self.labelImage.setPixmap(self.handle_image(frame)) 
 
     def handle_top_image(self, image):
         ret = None
         w, h = image.size
+        draw = ImageDraw.Draw(image) 
+        ys = self.config['lines']['top']['y']
+        for y,dy in ys:
+            y = int(y*h/100)
+            dy = int(dy*h/100)
+            draw.line((0, y, w, y), fill=(255,0,0), width=1)
+            draw.line((0, y+dy, w, y+dy), fill=(255,0,0), width=1)
+        xs = self.config['lines']['top']['x']
+        for x,dx in xs:
+            x = int(x*w/100)
+            dx = int(dx*w/100)
+            draw.line((x ,0, x, h), fill=(255,0,0), width=1)
+            draw.line((x+dx, 0, x+dx,h), fill=(255,0,0), width=1)
+        ret = image
+        # imageQ = ImageQt(image)
+        # pixmap = QPixmap.fromImage(imageQ)
+        # ret = pixmap.scaledToHeight(int(h*self.image_ratio))
         return ret
     
     def handle_shortside_image(self, image):
         ret = None
         w, h = image.size
+        draw = ImageDraw.Draw(image) 
+        ys = self.config['lines']['shortside']['y']
+        for y,dy in ys:
+            y = int(y*h/100)
+            dy = int(dy*h/100)
+            draw.line((0, y, w, y), fill=(255,0,0), width=1)
+            draw.line((0, y+dy, w, y+dy), fill=(255,0,0), width=1)
+        xs = self.config['lines']['shortside']['x']
+        for x,dx in xs:
+            x = int(x*w/100)
+            dx = int(dx*w/100)
+            draw.line((x ,0, x, h), fill=(255,0,0), width=1)
+            draw.line((x+dx, 0, x+dx,h), fill=(255,0,0), width=1)
+        ret = image
+        # imageQ = ImageQt(image)
+        # pixmap = QPixmap.fromImage(imageQ)
+        # ret = pixmap.scaledToHeight(int(h*self.image_ratio))
         return ret
 
     def handle_longside_image(self, image):
         ret = None
         w, h = image.size
+        draw = ImageDraw.Draw(image) 
+        ys = self.config['lines']['longside']['y']
+        for y,dy in ys:
+            y = int(y*h/100)
+            dy = int(dy*h/100)
+            # print("y={}, dy={}".format(y,dy))
+            draw.line((0, y, w, y), fill=(255,0,0), width=1)
+            draw.line((0, y+dy, w, y+dy), fill=(255,0,0), width=1)
+            # draw.line([(0, y), (w, y),(0, y+dy), (w, y+dy)], fill=(255,0,0), width=1)
+        xs = self.config['lines']['longside']['x']
+        for x,dx in xs:
+            x = int(x*w/100)
+            dx = int(dx*w/100)
+            # print("x={}, dx={}".format(x,dx))
+            draw.line((x ,0, x, h), fill=(255,0,0), width=1)
+            draw.line((x+dx, 0, x+dx,h), fill=(255,0,0), width=1)
+            # draw.line([(x ,0), (x, h),(x+dx, 0), (x+dx,h)], fill=(255,0,0), width=1)
+        ret = image
+        # imageQ = ImageQt(image)
+        # pixmap = QPixmap.fromImage(imageQ)
+        # ret = pixmap.scaledToHeight(int(h*self.image_ratio))
         return ret
 
     # def handle_camera_start(self, camera_name):
