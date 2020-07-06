@@ -10,6 +10,7 @@ import os
 import io
 import sys
 import time
+import json
 import logging
 import configparser
 import threading
@@ -32,17 +33,21 @@ class SettingWindow(QDialog, Ui_Dialog):
         self.data = data
 
 class CameraWorker(QThread):
-    def __init__(self):
+    def __init__(self, config):
         super(CameraWorker, self).__init__()
         self.camera_data = dict()
-        self.config = configparser.ConfigParser()
-        self.config.read(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'camera.ini'))
+        # self.config = configparser.ConfigParser()
+        # self.config.read(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'camera.ini'))
+        self.config = config
         self.camera_name = None
         self.camera_object = None
         self.camera_stop_event = threading.Event()
         self.cb = None
         self.take_image_event = threading.Event()
         self.image = None
+
+    def get_camera_name(self):
+        return self.camera_name
 
     def same_camera(self, camera_name):
         same_camera = False
@@ -81,7 +86,7 @@ class CameraWorker(QThread):
         logging.info("stop_camera_preview: --")
 
     def camera_find_by_name(self, camera_name):
-        sn = self.config['location'][camera_name]  
+        sn = self.config['camera'][camera_name]  
         camera = self.camera_find_by_serialnumber(sn)              
         return camera
 
@@ -114,7 +119,7 @@ class CameraWorker(QThread):
         logging.info("camera_find_by_serialnumber: -- found={}".format(found))
         return ret
 
-    def take_camera(self):
+    def take_photo(self):
         image = None
         self.take_image_event.set()
         while self.take_image_event.is_set():
@@ -176,12 +181,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.zoomInButton.clicked.connect(self.zoomInButton_clicked)
         self.zoomOutButton.clicked.connect(self.zoomOutButton_clicked)
         self.calibrateButton.clicked.connect(self.calibrate_handler)
+        self.testButton.clicked.connect(self.test_button)
         # show default image
         self.labelImage.setText('')
         self.settingData={'line_width':15}
         # self.labelImage.setPixmap(QtGui.QPixmap(r"D:\\projects\\images\\0623\\3.jpg").scaledToHeight(600))
-        self.config = configparser.ConfigParser()
-        self.config.read(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'camera.ini'))
+        # self.config = configparser.ConfigParser()
+        # self.config.read(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'camera.ini'))
+        self.config = None
+        with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.json')) as f:
+            self.config = json.load(f)
         # self.rc = redis.Redis()
         # write camera calibration data in redis
         # self.rc.set("Camera_TP.serialnumber", self.config['location']['camera_tp'])
@@ -199,10 +208,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.camera_worker is not None:
             self.camera_worker.stop_camera_preview()
     
+    def test_button(self):
+        if self.config is not None:
+            pass
+        pass
+
     def calibrate_handler(self):
         logging.info("calibrate_handler: ++")
         if self.camera_worker is not None:
-            img = self.camera_worker.take_camera()
+            img = self.camera_worker.take_photo()
             if img is not None:
                 img.save("test.jpg")
                 # with open('save.jpg', 'rb') as f:
@@ -274,17 +288,31 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.labelImage.setPixmap(self.handle_image(img))
 
     def handle_image(self, img):
+        ret = None
         w, h = img.size
         if self.image_ratio == 0:            
             sz = self.labelImage.size()
             self.image_ratio = min(sz.width()/w, sz.height()/h)
-        draw = ImageDraw.Draw(img) 
-        draw.line((0,int(h/2), w,int(h/2)), fill=128, width=4)
-        draw.line((int(w/2),0, int(w/2),h), fill=128, width=4)
-        imageQ = ImageQt(img)
-        pixmap = QPixmap.fromImage(imageQ)
-        return pixmap.scaledToHeight(int(h*self.image_ratio))
+        camera_name = ''
+        try:
+            camera_name = self.camera_worker.get_camera_name()
+        except:
+            pass
+        if camera_name == 'Camera_TP':
+            ret = handle_top_image(img)
+        elif camera_name == 'Camera_SS':
+            pass
+        elif camera_name == 'Camera_LS':
+            pass
+        else:
+            draw = ImageDraw.Draw(img) 
+            draw.line((0,int(h/2), w,int(h/2)), fill=128, width=4)
+            draw.line((int(w/2),0, int(w/2),h), fill=128, width=4)
+            imageQ = ImageQt(img)
+            pixmap = QPixmap.fromImage(imageQ)
+            ret = pixmap.scaledToHeight(int(h*self.image_ratio))
         # return pixmap
+        return ret
 
     def show_settingsDlg(self):
         logging.info("show_settingsDlg: ++")
@@ -305,13 +333,28 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.camera_worker.stop_camera_preview()
                 self.camera_worker = None
         if self.camera_worker is None:
-            self.camera_worker = CameraWorker()
+            self.camera_worker = CameraWorker(self.config)
             # self.camera_worker.on_camera_frame_arrival.connect(self.on_frame_arrival)
             ret = self.camera_worker.start_camera_preview(camera_name, self.on_frame_arrival)        
         return ret 
 
     def on_frame_arrival(self, frame):
         self.labelImage.setPixmap(self.handle_image(frame)) 
+
+    def handle_top_image(self, image):
+        ret = None
+        w, h = image.size
+        return ret
+    
+    def handle_shortside_image(self, image):
+        ret = None
+        w, h = image.size
+        return ret
+
+    def handle_longside_image(self, image):
+        ret = None
+        w, h = image.size
+        return ret
 
     # def handle_camera_start(self, camera_name):
     #     ret = False
