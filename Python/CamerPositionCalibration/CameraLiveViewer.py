@@ -1,5 +1,5 @@
 from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtWidgets import QMainWindow, QDialog, QMessageBox
+from PyQt5.QtWidgets import QMainWindow, QDialog, QMessageBox, QFileDialog
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import QThread, pyqtSignal
 from Ui_CameraLiveViewer import Ui_MainWindow
@@ -212,8 +212,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     
     def test_button(self):
         if self.current_image is not None:
+            options = QFileDialog.Options()
+            options |= QFileDialog.DontUseNativeDialog
+            fileName, _ = QFileDialog.getSaveFileName(self,"Save current frame into file.","","All Files (*);;JEPG Files (*.jpg)", options=options)            
             self.current_image_lock.acquire()
-            self.current_image.save('test_liveview.jpg')
+            self.current_image.save(fileName)
             self.current_image_lock.release()
         pass
 
