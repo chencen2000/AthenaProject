@@ -17,18 +17,18 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,9">
      <item>
-      <layout class="QVBoxLayout" name="verticalLayout">
+      <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
         <widget class="QLabel" name="label">
          <property name="text">
-          <string>Calibrate P2</string>
+          <string>Calibrate P1</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="pushButtonGotoP2">
+        <widget class="QPushButton" name="pushButtonGotoP1">
          <property name="text">
-          <string>Go To P2</string>
+          <string>Go To P1</string>
          </property>
         </widget>
        </item>
@@ -97,11 +97,22 @@
       </layout>
      </item>
      <item>
-      <widget class="QLabel" name="labelImage">
-       <property name="text">
-        <string/>
-       </property>
-      </widget>
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <item>
+        <widget class="QLabel" name="label_image_1">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_image_2">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
     </layout>
    </item>

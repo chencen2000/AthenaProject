@@ -78,8 +78,17 @@ class CalibrationP2Widget(QtWidgets.QWidget, Ui_Frame):
         self.setupUi(self)
         self.get_position()
         self.pushButtonExit.clicked.connect(self.exit_cliecked)
+        self.pushButtonGotoP2.clicked.connect(self.handle_gotop2)
         self.thread = CameraWorker(self.on_frame_arrival)
         self.thread.start()
+
+    def handle_gotop2(self):
+        try:
+            r = requests.get('http://localhost:8010/lift/go', params={'p': 2})
+            if r.status_code==200:
+                pass            
+        except:
+            pass
 
     def exit_cliecked(self):
         self.close()
@@ -93,10 +102,18 @@ class CalibrationP2Widget(QtWidgets.QWidget, Ui_Frame):
         pass
 
     def on_frame_arrival(self, frame):
-        imageQ = ImageQt(frame)
+        image = self.draw_image(frame)
+        imageQ = ImageQt(image)
         pixmap = QPixmap.fromImage(imageQ)
         self.labelImage.setPixmap(pixmap) 
         pass
+
+    def draw_image(self, image):
+        w, h = image.size
+        draw = ImageDraw.Draw(image) 
+        draw.line((0,int(h/2), w,int(h/2)), fill=128, width=4)
+        draw.line((int(w/2),0, int(w/2),h), fill=128, width=4)
+        return image
 
     def get_position(self):
         try:
